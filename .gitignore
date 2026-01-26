@@ -1,0 +1,57 @@
+# ========================
+# Gowin IDE Generated Files
+# ========================
+# Implementation directory (contains synthesis & PnR results, bitstreams, reports)
+impl/
+# Temporary directory used by Gowin
+temp/
+
+# Other Generated files
+*.mod
+*_tmp.v
+
+
+# Autosave and backup files
+*.bak
+*.restore
+gw_autosave.*
+
+# Output Bitstreams (Binary files)
+*.fs
+*.bin
+*.sbit
+
+# Gowin Project User Settings (Local preferences)
+*.gprj.user
+# ========================
+# Simulation & Waveforms
+# ========================
+# Waveform dump files
+*.vcd
+*.fsdb
+*.wlf
+
+# Log files
+*.log
+*.jou
+*.pb
+
+# ModelSim / QuestaSim generated folders (if used for sim)
+work/
+transcript
+
+#Gowin Logic Analyzer config
+*.rao
+
+# ========================
+# OS & Editor Clutter
+# ========================
+# Windows
+Thumbs.db
+ehthumbs.db
+
+# Mac
+.DS_Store
+
+# VS Code (if you use it for editing SV files)
+.vscode/

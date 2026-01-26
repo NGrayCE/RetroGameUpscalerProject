@@ -1,0 +1,60 @@
+// Clock
+IO_LOC "sys_clk" V22;
+IO_PORT "sys_clk" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=OFF;
+
+// Reset
+IO_LOC "rst_n" AA13;
+IO_PORT "rst_n" IO_TYPE=LVCMOS33 PULL_MODE=UP DRIVE=OFF BANK_VCCIO=3.3;
+
+// HDMI - Only map the "P" pins. 
+// The N pins (H14, H15, J17, G16) are automatically used by the differential driver.
+IO_LOC "tmds_d_p[0]" J14;
+IO_PORT "tmds_d_p[0]" IO_TYPE=LVCMOS33D PULL_MODE=NONE DRIVE=8;
+
+IO_LOC "tmds_d_p[1]" J15;
+IO_PORT "tmds_d_p[1]" IO_TYPE=LVCMOS33D PULL_MODE=NONE DRIVE=8;
+
+IO_LOC "tmds_d_p[2]" K17;
+IO_PORT "tmds_d_p[2]" IO_TYPE=LVCMOS33D PULL_MODE=NONE DRIVE=8;
+
+IO_LOC "tmds_clk_p" G15;
+IO_PORT "tmds_clk_p" IO_TYPE=LVCMOS33D PULL_MODE=NONE DRIVE=8;
+
+//pcm1808 connections
+IO_LOC  "i2s_din" E21;		// PMOD1_IO6
+IO_PORT "i2s_din" PULL_MODE=NONE IO_TYPE=LVCMOS33;
+IO_LOC  "i2s_lrck" E22;		// PMOD1_IO4
+IO_PORT "i2s_lrck" PULL_MODE=UP IO_TYPE=LVCMOS33;
+IO_LOC  "i2s_bck" F19;		// PMOD1_IO2
+IO_PORT "i2s_bck" PULL_MODE=NONE IO_TYPE=LVCMOS33;
+IO_LOC  "i2s_mclk"  W19;		// PMOD1_IO0
+IO_PORT "i2s_mclk" PULL_MODE=NONE IO_TYPE=LVCMOS33;
+
+//ad9226 connections (header on hdmi side on tang console)
+IO_LOC "adc_in[0]" E14;
+IO_PORT "adc_in[0]" IO_TYPE=LVCMOS33;
+IO_LOC "adc_in[1]" E13;
+IO_PORT "adc_in[1]" IO_TYPE=LVCMOS33;
+IO_LOC "adc_in[2]" C15;
+IO_PORT "adc_in[2]" IO_TYPE=LVCMOS33;
+IO_LOC "adc_in[3]" C14;
+IO_PORT "adc_in[3]" IO_TYPE=LVCMOS33;
+IO_LOC "adc_in[4]" B13;
+IO_PORT "adc_in[4]" IO_TYPE=LVCMOS33;
+IO_LOC "adc_in[5]" C13;
+IO_PORT "adc_in[5]" IO_TYPE=LVCMOS33;
+IO_LOC "adc_in[6]" A14;
+IO_PORT "adc_in[6]" IO_TYPE=LVCMOS33;
+IO_LOC "adc_in[7]" A13;
+IO_PORT "adc_in[7]" IO_TYPE=LVCMOS33;
+IO_LOC "adc_in[8]" B21;
+IO_PORT "adc_in[8]" IO_TYPE=LVCMOS33;
+IO_LOC "adc_in[9]" A21;
+IO_PORT "adc_in[9]" IO_TYPE=LVCMOS33;
+IO_LOC "adc_in[10]" B20;
+IO_PORT "adc_in[10]" IO_TYPE=LVCMOS33;
+IO_LOC "adc_in[11]" A20;
+IO_PORT "adc_in[11]" IO_TYPE=LVCMOS33;
+
+IO_LOC "adc_clk" B17;
+IO_PORT "adc_clk" IO_TYPE=LVCMOS33;
