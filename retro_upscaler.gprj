@@ -5,8 +5,10 @@
     <Version>5</Version>
     <Device name="GW5AST-138C" pn="GW5AST-LV138PG484AC1/I0">gw5ast138c-007</Device>
     <FileList>
+        <File path="src/audio_in/i2s_rx.sv" type="file.verilog" enable="1"/>
         <File path="src/gowin_pll/gowin_pll.v" type="file.verilog" enable="1"/>
         <File path="src/gowin_pll/gowin_pll_mod.v" type="file.verilog" enable="1"/>
+        <File path="src/gowin_pll/pll_init.v" type="file.verilog" enable="1"/>
         <File path="src/gowin_sdpb/gowin_sdpb.v" type="file.verilog" enable="1"/>
         <File path="src/hdmi/audio_clock_regeneration_packet.sv" type="file.verilog" enable="1"/>
         <File path="src/hdmi/audio_info_frame.sv" type="file.verilog" enable="1"/>
@@ -18,11 +20,9 @@
         <File path="src/hdmi/serializer.sv" type="file.verilog" enable="1"/>
         <File path="src/hdmi/source_product_description_info_frame.sv" type="file.verilog" enable="1"/>
         <File path="src/hdmi/tmds_channel.sv" type="file.verilog" enable="1"/>
-        <File path="src/i2s_rx.sv" type="file.verilog" enable="1"/>
-        <File path="src/ping_pong_buffer_controller.sv" type="file.verilog" enable="1"/>
-        <File path="src/pll_init.v" type="file.verilog" enable="1"/>
         <File path="src/top.sv" type="file.verilog" enable="1"/>
-        <File path="src/video_in_sync_seperator.sv" type="file.verilog" enable="1"/>
+        <File path="src/video_in/ping_pong_buffer_controller.sv" type="file.verilog" enable="1"/>
+        <File path="src/video_in/video_in_sync_seperator.sv" type="file.verilog" enable="1"/>
         <File path="src/tang_console_neo_138k.cst" type="file.cst" enable="1"/>
         <File path="src/retro_upscaler.rao" type="file.gao" enable="1"/>
     </FileList>

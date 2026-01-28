@@ -17,10 +17,10 @@ module sync_separator (
 
     // Voltage Threshold: Below this value = SYNC TIP. Above = VIDEO/BLACK.
     // TODO:Use a logic analyzer to find the actual threshold value for this adc
-    parameter int SYNC_VOLTAGE_THRESH = 500; 
+    parameter int SYNC_VOLTAGE_THRESH = 2850; 
 
     // Timing Thresholds (in 36.9 MHz ticks)
-    parameter int HSYNC_MIN_WIDTH = 100;  // Minimum valid HSync (~2.7us)
+    parameter int HSYNC_MIN_WIDTH = 20;  // Minimum valid HSync (~2.7us)
     parameter int VSYNC_MIN_WIDTH = 800;  // Minimum valid VSync (~21us)
     
     // Back Porch: Time between HSync rising edge and actual image data

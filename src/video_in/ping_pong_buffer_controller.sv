@@ -2,9 +2,9 @@
 //by Nolan Gray
 
 module ping_pong_controller (
-    input  logic        clk_write,    // 38.9 MHz sampling strobe
-    input  logic        clk_read,     // 74.25 MHz HDMI Pixel Clock
+    input  logic        clk,
     input  logic        rst,
+    input  logic        sample_enable,
     
     //From Sync Separator
     input  logic        h_sync_in,    // Triggers the buffer swap
@@ -35,12 +35,12 @@ module ping_pong_controller (
     logic [10:0] write_pointer; // 0 to 2047
     logic        prev_h_sync;
 
-    always_ff @(posedge clk_write or posedge rst) begin
+    always_ff @(posedge clk or posedge rst) begin
         if (rst) begin
             write_pointer <= 0;
             buffer_select <= 0;
             prev_h_sync   <= 0;
-        end else begin
+        end else if (sample_enable) begin
             prev_h_sync <= h_sync_in;
 
             // Detect Rising Edge of HSync -> swap buffer
@@ -68,7 +68,7 @@ module ping_pong_controller (
     /****Read Side****/
 
     logic [10:0] read_pointer;
-    always_ff @(posedge clk_read or posedge rst) begin
+    always_ff @(posedge clk or posedge rst) begin
         if (rst) begin
             read_pointer <= 0;
         end else begin

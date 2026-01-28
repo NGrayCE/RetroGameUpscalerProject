@@ -34,7 +34,46 @@ module top (
             .lock(pll_locked) //output  lock
     );
     
-    assign sys_rst = !pll_locked || rst_n;
+    // Power-On Delay & Debounce
+    // Holds reset active for ~300ms after power-up or PLL lock to ensure stability
+    logic [23:0] reset_counter;
+    logic        sys_rst_delayed;
+
+    always_ff @(posedge sys_clk) begin
+        // If PLL unlocks or Button is pressed (Active Low), reset immediately
+        if (!pll_locked || !rst_n) begin
+            reset_counter   <= 0;
+            sys_rst_delayed <= 1'b1;
+        end else begin
+            // Count until the counter fills up
+            if (reset_counter != 24'hFFFFFF) begin
+                reset_counter   <= reset_counter + 1;
+                sys_rst_delayed <= 1'b1; // Keep holding reset
+            end else begin
+                sys_rst_delayed <= 1'b0; // Release (Boot sequence complete)
+            end
+        end
+    end
+
+    // Reset Synchronizer for HDMI Domain
+    // Moves the reset signal safely into the 74MHz clock domain
+    logic hdmi_rst_sync_1, hdmi_rst_sync_2;
+    logic hdmi_rst_clean;
+
+    always_ff @(negedge clk_pixel) begin
+        if (sys_rst_delayed) begin
+            hdmi_rst_sync_1 <= 1'b1;
+            hdmi_rst_sync_2 <= 1'b1;
+            hdmi_rst_clean  <= 1'b1;
+        end else begin
+            hdmi_rst_sync_1 <= 1'b0;
+            hdmi_rst_sync_2 <= hdmi_rst_sync_1; // Double flop for safety
+            hdmi_rst_clean  <= hdmi_rst_sync_2;
+        end
+    end
+    
+    // Assign the main system reset
+    assign sys_rst = sys_rst_delayed;
 
     // Audio Clock Generation
     // =========================================================================
@@ -174,8 +213,8 @@ module top (
 
     //Ping pong controller to handle read and write of video buffer
     ping_pong_controller pp_ctrl (
-        .clk_write(adc_enable_strobe), 
-        .clk_read(clk_pixel),
+        .sample_enable(adc_enable_strobe), 
+        .clk(clk_pixel),
         .rst(sys_rst),
         
         // Write Side
@@ -203,7 +242,7 @@ module top (
             .clkb(clk_pixel), //input clkb
             .ceb(1'b1), //input ceb
             .oce(1'b1), //input oce
-            .reset(rst), //input reset
+            .reset(sys_rst), //input reset
             .ada(ram_wr_addr), //input [11:0] ada from controller
             .din(ram_wr_data), //input [11:0] din from adc
             .adb(ram_rd_addr) //input [11:0] adb from controller
