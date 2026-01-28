@@ -201,10 +201,6 @@ module top (
     logic [11:0] ram_wr_data, ram_rd_data, pp_pixel_out;
     logic [11:0] ram_wr_addr, ram_rd_addr;
     logic        ram_wr_en;
-    
-    //Only want to write to RAM if we are in active video AND it's a valid sample cycle
-    logic write_qualifier;
-    assign write_qualifier = sync_active_video && adc_enable_strobe;
 
     //Detect start of HDMI line to reset read pointer
     logic hdmi_line_start; 
@@ -219,7 +215,7 @@ module top (
         
         // Write Side
         .h_sync_in(sync_h_pulse),
-        .active_video_in(write_qualifier),
+        .active_video_in(sync_active_video),
         .pixel_data_in(adc_data_captured),
         
         // Read Side
