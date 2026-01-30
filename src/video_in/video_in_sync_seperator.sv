@@ -27,7 +27,7 @@ module sync_separator (
     parameter int BACK_PORCH_DELAY = 175; // ~4.7us
 
     // Screen Width: How many samples to capture per line
-    parameter int ACTIVE_WIDTH     = 1280; // Capture 1280 samples
+    parameter int ACTIVE_WIDTH     = 1920; // Capture 1920 samples and discard 1/3
 
     /****Logic****/
 
