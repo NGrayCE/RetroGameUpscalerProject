@@ -44,6 +44,8 @@ module sync_separator (
 
     //Threshold Comparator
     assign is_sync_level = (adc_data < SYNC_VOLTAGE_THRESH);
+    //save when v sync is detected and reset in sync with h sync
+    logic v_sync_flag;
 
     always_ff @(posedge clk or posedge rst) begin
         if (rst) begin
@@ -53,6 +55,7 @@ module sync_separator (
             pixel_counter    <= 0;
             in_active_region <= 0;
             prev_sync_level  <= 0;
+            v_sync_flag      <= 0;
         end else if (sample_valid) begin
             // Reset strobes every sample
             h_sync_pulse <= 0;
@@ -68,21 +71,26 @@ module sync_separator (
             end else begin
                 // Signal is HIGH (Video or Blanking)
                 // Did we JUST finish a low pulse? (Rising Edge of Sync)
-                if (prev_sync_level == 1'b1) begin
-                    
-                    //Was it a VSYNC?
-                    if (low_counter > VSYNC_MIN_WIDTH) begin
+                // Rising Edge of Sync
+            if (prev_sync_level == 1'b1) begin
+                
+                // Check for Vertical Sync
+                if (low_counter > VSYNC_MIN_WIDTH) begin
+                    // Don't fire pulse yet! Just remember we saw it.
+                    v_sync_flag <= 1'b1; 
+                end 
+                // Check for Horizontal Sync
+                else if (low_counter > HSYNC_MIN_WIDTH) begin
+                    h_sync_pulse <= 1'b1;
+                    pixel_counter <= 0; // Reset line timing ONLY on H-Sync
+
+                    // If we have a pending V-Sync, fire it now, perfectly aligned!
+                    if (v_sync_flag) begin
                         v_sync_pulse <= 1'b1;
-                        // Reset line timing
-                        pixel_counter <= 0;
-                    end 
-                    //Was it an HSYNC?
-                    else if (low_counter > HSYNC_MIN_WIDTH) begin
-                        h_sync_pulse <= 1'b1;
-                        // Reset line timing triggers
-                        pixel_counter <= 0; 
+                        v_sync_flag  <= 0; // Clear the flag
                     end
                 end
+            end
                 
                 // Reset counter since we are not low anymore
                 low_counter <= 0;

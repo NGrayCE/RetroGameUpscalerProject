@@ -45,6 +45,8 @@ module hdmi
     input logic reset,
     input logic [23:0] rgb,
     input logic [AUDIO_BIT_WIDTH-1:0] audio_sample_word [1:0],
+    //reset counters when analog fram finishes to align
+    input logic analog_frame_finished,
 
     // These outputs go to your HDMI port
     output logic [2:0] tmds,
@@ -187,8 +189,29 @@ begin
     end
     else
     begin
-        cx <= cx == frame_width-1'b1 ? BIT_WIDTH'(0) : cx + 1'b1;
-        cy <= cx == frame_width-1'b1 ? cy == frame_height-1'b1 ? BIT_HEIGHT'(0) : cy + 1'b1 : cy;
+    //not touching x counter because monitor uses h sync for pll
+        cx <= (cx == frame_width - 1'b1) ? BIT_WIDTH'(0) : cx + 1'b1;
+
+        // If the Analog Frame finishes, we Force-Align the Vertical Counter
+        if (analog_frame_finished) 
+        begin
+            // If we are "Fast" (Wrapped to top) -> Reset to 0 (Active Video Start)
+            // If we are "Slow" (Still in frame) -> Reset to V-Sync Start to force a sync
+            // Note: Line 50 is an arbitrary safety buffer to distinguish "Fast" vs "Slow"
+            if (cy > 50 && cy < (screen_height + vsync_porch_start))
+                cy <= screen_height + vsync_porch_start; // Force jump to V-Sync (Line 725)
+            else
+                cy <= BIT_HEIGHT'(0); // Force jump to Active Video (Line 0)
+        end
+        else if (cx == frame_width - 1'b1) 
+        begin
+            // Normal counting at the end of a line
+            if (cy == frame_height - 1'b1)
+                cy <= BIT_HEIGHT'(0);
+            else
+                cy <= cy + 1'b1;
+        end
+        // If not at end of line and not resetting, hold current cy
     end
 end
 

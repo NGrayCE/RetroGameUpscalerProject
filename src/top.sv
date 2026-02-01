@@ -209,7 +209,10 @@ module top (
     //Detect start of HDMI line to reset read pointer
     logic hdmi_line_start; 
     logic video_data_period;
-    assign hdmi_line_start = (cx == 0); 
+    
+    //reset read pointer on both syncs
+    //TODO:is the cy condition still needed?
+    assign hdmi_line_start = (cx == 0) || (cy == 0); 
 
     //Ping pong controller to handle read and write of video buffer
     ping_pong_controller pp_ctrl (
@@ -219,6 +222,7 @@ module top (
         
         // Write Side
         .h_sync_in(sync_h_pulse),
+        .v_sync_in(sync_v_pulse),
         .active_video_in(write_qualifier),
         .pixel_data_in(adc_data_captured),
         
@@ -280,7 +284,9 @@ module top (
       .frame_height(frame_height),
       .screen_width(screen_width),
       .screen_height(screen_height),
-      .video_data_period(video_data_period)
+      .video_data_period(video_data_period),
+      //signal to syncronize the frame rates
+      .analog_frame_finished(sync_v_pulse)
     );
 
     //Using gowin IP

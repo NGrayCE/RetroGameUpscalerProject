@@ -8,6 +8,7 @@ module ping_pong_controller (
     
     //From Sync Separator
     input  logic        h_sync_in,    // Triggers the buffer swap
+    input   logic            v_sync_in,         //to align frames
     input  logic        active_video_in, //flag for active video data
     input  logic [11:0] pixel_data_in,
     
@@ -34,6 +35,7 @@ module ping_pong_controller (
 
     logic [10:0] write_pointer; // 0 to 2047
     logic        prev_h_sync;
+    logic           prev_v_sync;
     //3:2 scaler needed because we are sampling 1920 pixels but can only output 1280
     logic [1:0]  scale_counter;
 
@@ -46,9 +48,16 @@ module ping_pong_controller (
             scale_counter <= 0;
         end else if (sample_enable) begin
             prev_h_sync <= h_sync_in;
+        prev_v_sync <= v_sync_in;
 
+        //reset buffer and pointers on v sync
+        if (v_sync_in && !prev_v_sync) begin
+                buffer_select <= 0; //reset buffer select
+                write_pointer <= 0; //reset write pointer
+                scale_counter <= 0;
+        end
             // Detect Rising Edge of HSync -> swap buffer
-            if (h_sync_in && !prev_h_sync) begin
+            else if (h_sync_in && !prev_h_sync) begin
                 buffer_select <= ~buffer_select; // Toggle A/B
                 write_pointer <= 0;              // Reset pointer for new line
                 scale_counter <= 0;
@@ -88,17 +97,17 @@ module ping_pong_controller (
         if (rst) begin
             read_pointer <= 0;
         end else begin
-            //TODO:Implement more robust scaling logic
-            //for now line doubling will work
-            //Reset pointer at start of each line
-            if (line_reset) begin
-                read_pointer <= 0;
-            end 
-            else if (hdmi_request) begin
-                //Read from the opposite buffer
-                ram_rd_addr <= {~buffer_select, read_pointer};
-                read_pointer <= read_pointer + 1;
-            end
+                //TODO:Implement more robust scaling logic
+                //for now line doubling will work
+                //Reset pointer at start of each line
+                if (line_reset) begin
+                    read_pointer <= 0;
+                end 
+                else if (hdmi_request) begin
+                    //Read from the opposite buffer
+                    ram_rd_addr <= {~buffer_select, read_pointer};
+                    read_pointer <= read_pointer + 1;
+                end
         end
     end
     
