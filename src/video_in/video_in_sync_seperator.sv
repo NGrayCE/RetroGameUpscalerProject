@@ -42,8 +42,44 @@ module sync_separator (
     assign x_coord = pixel_counter;
     assign active_video = in_active_region;
 
-    //Threshold Comparator
-    assign is_sync_level = (adc_data < SYNC_VOLTAGE_THRESH);
+    //dynamic threshold comparator
+    logic [11:0] sync_tip_val;     // The lowest voltage seen recently
+    logic [15:0] leak_counter;     // Timer to slowly "forget" the minimum
+
+    // Fixed "Safety Margin" above the tip 
+    localparam int SYNC_MARGIN = 250; 
+
+    always_ff @(posedge clk or posedge rst) begin
+        if (rst) begin
+            sync_tip_val <= 12'd4095; // Start high
+            leak_counter <= 0;
+        end else begin
+            //If we see a lower value, grab it immediately
+            if (adc_data < sync_tip_val) begin
+                sync_tip_val <= adc_data;
+            end
+            // 2.Slowly raise the floor (Leak) to handle drift
+            //~1.7ms response time
+            else begin
+                leak_counter <= leak_counter + 1;
+                if (leak_counter == 16'hFFFF) begin
+                    if (sync_tip_val < 12'd4095)
+                        sync_tip_val <= sync_tip_val + 1;
+                end
+            end
+        end
+    end
+
+    // Dynamic Threshold Calculation
+    // Use 13 bits to capture the sum, then clamp it
+    wire [12:0] calc_thresh;
+    assign calc_thresh = sync_tip_val + SYNC_MARGIN;
+    wire [11:0] dynamic_thresh;
+    assign dynamic_thresh = (calc_thresh > 13'd4095) ? 12'd4095 : calc_thresh[11:0];
+    
+    // Use the dynamic threshold instead of the parameter
+    assign is_sync_level = (adc_data < dynamic_thresh);
+
     //save when v sync is detected and reset in sync with h sync
     logic v_sync_flag;
 
