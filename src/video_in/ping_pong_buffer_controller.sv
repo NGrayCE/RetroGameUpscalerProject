@@ -2,22 +2,22 @@
 //by Nolan Gray
 
 module ping_pong_controller (
-    input  logic        clk,
-    input  logic        rst,
-    input  logic        sample_enable,
+    input  logic        clk,                // HDMI pixel clock
+    input  logic        rst,                // Active high reset
+    input  logic        sample_enable,      // ADC sample tick
     
     //From Sync Separator
-    input  logic        h_sync_in,    // Triggers the buffer swap
-    input   logic            v_sync_in,         //to align frames
-    input  logic        active_video_in, //flag for active video data
-    input  logic [11:0] pixel_data_in,
+    input  logic        h_sync_in,          // Triggers the buffer swap
+    input  logic        v_sync_in,          // To align frames
+    input  logic        active_video_in,    // flag for active video data
+    input  logic [11:0] pixel_data_in,      // Input from adc
     
     //From HDMI Module
-    input  logic        line_reset, //for line scaler
-    input  logic        hdmi_request, // HDMI module asking for a pixel
-    output logic [11:0] pixel_data_out,
+    input  logic        line_reset,         // Read line again when signaled
+    input  logic        hdmi_request,       // HDMI module asking for a pixel
+    output logic [11:0] pixel_data_out,     // Output for HDMI module
     
-    // MEMORY INTERFACE
+    // Memory Interface
     output logic        ram_wr_en,
     output logic [11:0] ram_wr_addr,
     output logic [11:0] ram_wr_data,
@@ -31,11 +31,11 @@ module ping_pong_controller (
     // 1 = Write to Upper Half, Read from Lower Half
     logic buffer_select; 
     
-    //****Write Side****/
+    //***************WRITE SIDE**************/
 
     logic [10:0] write_pointer; // 0 to 2047
     logic        prev_h_sync;
-    logic           prev_v_sync;
+    logic        prev_v_sync;
     //3:2 scaler needed because we are sampling 1920 pixels but can only output 1280
     logic [1:0]  scale_counter;
 
@@ -48,15 +48,15 @@ module ping_pong_controller (
             scale_counter <= 0;
         end else if (sample_enable) begin
             prev_h_sync <= h_sync_in;
-        prev_v_sync <= v_sync_in;
+            prev_v_sync <= v_sync_in;
 
-        //reset buffer and pointers on v sync
-        if (v_sync_in && !prev_v_sync) begin
-                buffer_select <= 0; //reset buffer select
-                write_pointer <= 0; //reset write pointer
-                scale_counter <= 0;
-        end
-            // Detect Rising Edge of HSync -> swap buffer
+            // Reset buffer and pointers on v sync
+            if (v_sync_in && !prev_v_sync) begin
+                    buffer_select <= 0; //reset buffer select
+                    write_pointer <= 0; //reset write pointer
+                    scale_counter <= 0;
+            end
+            // Swap buffer and reset pointers on h sync
             else if (h_sync_in && !prev_h_sync) begin
                 buffer_select <= ~buffer_select; // Toggle A/B
                 write_pointer <= 0;              // Reset pointer for new line
@@ -90,15 +90,16 @@ module ping_pong_controller (
         end
     end
 
-    /****Read Side****/
+    /**************READ SIDE**************/
 
     logic [10:0] read_pointer;
+
     always_ff @(posedge clk or posedge rst) begin
         if (rst) begin
             read_pointer <= 0;
         end else begin
                 //TODO:Implement more robust scaling logic
-                //for now line doubling will work
+                //for now line doubling/tripling will work
                 //Reset pointer at start of each line
                 if (line_reset) begin
                     read_pointer <= 0;
