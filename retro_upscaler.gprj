@@ -24,6 +24,6 @@
         <File path="src/video_in/ping_pong_buffer_controller.sv" type="file.verilog" enable="1"/>
         <File path="src/video_in/video_in_sync_seperator.sv" type="file.verilog" enable="1"/>
         <File path="src/tang_console_neo_138k.cst" type="file.cst" enable="1"/>
-        <File path="src/retro_upscaler.rao" type="file.gao" enable="1"/>
+        <File path="src/retro_upscaler.rao" type="file.gao" enable="0"/>
     </FileList>
 </Project>

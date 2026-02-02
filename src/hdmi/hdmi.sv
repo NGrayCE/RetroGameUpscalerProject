@@ -63,7 +63,13 @@ module hdmi
     output logic [BIT_HEIGHT-1:0] frame_height,
     output logic [BIT_WIDTH-1:0] screen_width,
     output logic [BIT_HEIGHT-1:0] screen_height,
+
+/*********Below signals added for upscaler implementation*********/
+    //signal to reset counters when analog frame finishes to align
+    input logic analog_frame_finished,
+    // output when we are in active video for ram controller
     output logic video_data_period
+/*****************************************************************/
 );
 
 localparam int NUM_CHANNELS = 3;
@@ -85,8 +91,7 @@ generate
             assign screen_height = 480;
             assign hsync_porch_start = 16;
             assign hsync_porch_size = 96;
-            //debug-change from 10 to 35 to remove line on top
-            assign vsync_porch_start = 30;
+            assign vsync_porch_start = 10;
             assign vsync_porch_size = 2;
             assign invert = 1;
             end
@@ -187,13 +192,35 @@ begin
     end
     else
     begin
-        cx <= cx == frame_width-1'b1 ? BIT_WIDTH'(0) : cx + 1'b1;
-        cy <= cx == frame_width-1'b1 ? cy == frame_height-1'b1 ? BIT_HEIGHT'(0) : cy + 1'b1 : cy;
+    //NOT resetting x counter because monitor uses h sync for pll
+        cx <= (cx == frame_width - 1'b1) ? BIT_WIDTH'(0) : cx + 1'b1;
+
+        // If the Analog Frame finishes, force align vertical counter
+        if (analog_frame_finished) 
+        begin
+            // If we are "Fast" (Wrapped to top) -> Reset to 0 (Active Video Start)
+            // If we are "Slow" (Still in frame) -> Reset to V-Sync Start to force a sync
+            // Note: Line 50 is an arbitrary safety buffer to distinguish "Fast" vs "Slow"
+            if (cy > 50 && cy < (screen_height + vsync_porch_start))
+                cy <= screen_height + vsync_porch_start; // Force jump to V-Sync
+            else
+                cy <= BIT_HEIGHT'(0); // Force jump to Active Video
+        end
+        else if (cx == frame_width - 1'b1) 
+        begin
+            // Normal counting at the end of a line
+            if (cy == frame_height - 1'b1)
+                cy <= BIT_HEIGHT'(0);
+            else
+                cy <= cy + 1'b1;
+        end
+        // If not at end of line and not resetting, hold current cy
     end
 end
 
 // See Section 5.2
-//Note:moved this to output to signal other modules
+
+//Note: Moved video_data_period to output to signal other modules
 //logic video_data_period = 0;
 always_ff @(posedge clk_pixel)
 begin

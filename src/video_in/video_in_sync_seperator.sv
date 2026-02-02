@@ -2,24 +2,20 @@
 //by Nolan Gray
 
 module sync_separator (
-    input  logic        clk,            // System Clock (73.8 MHz @ 720p)
-    input  logic        rst,
-    input  logic        sample_valid,   // Strobe sent to adc (36.9 MHz)
+    input  logic        clk,            // HDMI clock
+    input  logic        rst,            // active high reset
+    input  logic        sample_valid,   // Strobe sent to adc (~37 MHz)
     input  logic [11:0] adc_data,       // Raw video data
     
-    output logic        h_sync_pulse,   // Single cycle strobe at START of line
-    output logic        v_sync_pulse,   // Single cycle strobe at START of frame
+    output logic        h_sync_pulse,   // signal at start of LINE
+    output logic        v_sync_pulse,   // signal at start of FRAME
     output logic        active_video,   // High when valid pixel data is present
-    output logic [11:0] x_coord         // Useful for debugging
+    output logic [11:0] x_coord         // For debugging
 );
 
-    /****Paremeters****/
+    /****PARAMETERS****/
 
-    // Voltage Threshold: Below this value = SYNC TIP. Above = VIDEO/BLACK.
-    // TODO:Use a logic analyzer to find the actual threshold value for this adc
-    parameter int SYNC_VOLTAGE_THRESH = 2850; 
-
-    // Timing Thresholds (in 36.9 MHz ticks)
+    // Timing Thresholds (in 37 MHz ticks)
     parameter int HSYNC_MIN_WIDTH = 20;  // Minimum valid HSync (~2.7us)
     parameter int VSYNC_MIN_WIDTH = 800;  // Minimum valid VSync (~21us)
     
@@ -27,9 +23,12 @@ module sync_separator (
     parameter int BACK_PORCH_DELAY = 175; // ~4.7us
 
     // Screen Width: How many samples to capture per line
-    parameter int ACTIVE_WIDTH     = 1280; // Capture 1280 samples
+    parameter int ACTIVE_WIDTH     = 1920; // Capture 1920 samples
 
-    /****Logic****/
+    // Fixed "Safety Margin" above the sync tip 
+    localparam int SYNC_MARGIN = 250;
+
+    /****LOGIC****/
 
     logic is_sync_level;
     int   low_counter;
@@ -38,12 +37,49 @@ module sync_separator (
     logic       prev_sync_level;
     logic [11:0] pixel_counter;
     logic        in_active_region;
+    //save when v sync is detected and reset in sync with h sync
+    logic v_sync_flag;
 
     assign x_coord = pixel_counter;
     assign active_video = in_active_region;
 
-    //Threshold Comparator
-    assign is_sync_level = (adc_data < SYNC_VOLTAGE_THRESH);
+    //dynamic threshold comparator
+    logic [11:0] sync_tip_val;     // The lowest voltage seen recently
+    logic [15:0] leak_counter;     // Timer to slowly "forget" the minimum
+
+
+    always_ff @(posedge clk or posedge rst) begin
+        if (rst) begin
+            sync_tip_val <= 12'd4095; // Start high
+            leak_counter <= 0;
+        end else begin
+            //If we see a lower value, grab it immediately
+            if (adc_data < sync_tip_val) begin
+                sync_tip_val <= adc_data;
+            end
+            // 2.Slowly raise the floor (Leak) to handle drift
+            //~1.7ms response time
+            else begin
+                leak_counter <= leak_counter + 1;
+                if (leak_counter == 16'hFFFF) begin
+                    if (sync_tip_val < 12'd4095)
+                        sync_tip_val <= sync_tip_val + 1;
+                end
+            end
+        end
+    end
+
+    // Dynamic Threshold Calculation
+    // Use 13 bits to capture the sum, then clamp it
+    wire [12:0] calc_thresh;
+    assign calc_thresh = sync_tip_val + SYNC_MARGIN;
+    wire [11:0] dynamic_thresh;
+    assign dynamic_thresh = (calc_thresh > 13'd4095) ? 12'd4095 : calc_thresh[11:0];
+    
+    // Use the dynamic threshold to detect sync
+    assign is_sync_level = (adc_data < dynamic_thresh);
+
+/********************SYNC DETECTION***********************/
 
     always_ff @(posedge clk or posedge rst) begin
         if (rst) begin
@@ -53,13 +89,13 @@ module sync_separator (
             pixel_counter    <= 0;
             in_active_region <= 0;
             prev_sync_level  <= 0;
+            v_sync_flag      <= 0;
         end else if (sample_valid) begin
-            // Reset strobes every sample
+            // Reset every sample
             h_sync_pulse <= 0;
             v_sync_pulse <= 0;
             prev_sync_level <= is_sync_level;
 
-            
             // Pulse Width Measurement
             if (is_sync_level) begin
                 // Signal is LOW (in sync tip)
@@ -70,20 +106,23 @@ module sync_separator (
                 // Did we JUST finish a low pulse? (Rising Edge of Sync)
                 if (prev_sync_level == 1'b1) begin
                     
-                    //Was it a VSYNC?
+                    // Check for Vertical Sync
                     if (low_counter > VSYNC_MIN_WIDTH) begin
-                        v_sync_pulse <= 1'b1;
-                        // Reset line timing
-                        pixel_counter <= 0;
+                        // save the flag but don't fire pulse until h sync
+                        v_sync_flag <= 1'b1; 
                     end 
-                    //Was it an HSYNC?
+                    // Check for Horizontal Sync
                     else if (low_counter > HSYNC_MIN_WIDTH) begin
                         h_sync_pulse <= 1'b1;
-                        // Reset line timing triggers
-                        pixel_counter <= 0; 
+                        pixel_counter <= 0; // Reset line timing ONLY on H-Sync
+
+                        // If we have a pending V-Sync, fire it now
+                        if (v_sync_flag) begin
+                            v_sync_pulse <= 1'b1;
+                            v_sync_flag  <= 0; // Clear the flag
+                        end
                     end
-                end
-                
+            end
                 // Reset counter since we are not low anymore
                 low_counter <= 0;
             end

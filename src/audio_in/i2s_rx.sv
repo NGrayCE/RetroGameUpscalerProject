@@ -15,7 +15,7 @@ module i2s_rx (
     always_ff @(posedge sck) begin
         ws_d <= ws;
 
-        //Detect edge
+        //Switch between L/R on word select edge
         if (ws != ws_d) begin
             bit_cnt <= 0;
             if (ws_d == 0) data_l <= shift_reg;
