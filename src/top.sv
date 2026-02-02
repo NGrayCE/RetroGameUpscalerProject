@@ -244,12 +244,12 @@ module top (
 
             //Read side
             .clkb(clk_pixel),
-            .adb(ram_rd_addr)   // 12 bit address, MSB for buffer select
+            .adb(ram_rd_addr),   // 12 bit address, MSB for buffer select
             .ceb(1'b1),         // Leave high, controller handles everything
             .oce(1'b1),
 
             //OUTPUTS
-            .dout(ram_rd_data), //12 bit output for controller
+            .dout(ram_rd_data) //12 bit output for controller
 
         );
 
