@@ -276,7 +276,7 @@ module top (
 `else
     // Create a signed version of the input
     logic signed [11:0] adc_signed;
-    assign adc_signed = {~adc_raw[11], adc_raw[10:0]}; // Invert MSB to center at 0
+    assign adc_signed = {~adc_data_captured[11], adc_data_captured[10:0]}; // Invert MSB to center at 0
 
     color_decoder decoder_inst(
         .clk(clk_pixel),
