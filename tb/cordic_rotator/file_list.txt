@@ -1,0 +1,2 @@
+../../src/cordic_rotator.sv
+tb_cordic_rotator.sv

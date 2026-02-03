@@ -7,7 +7,6 @@
     <FileList>
         <File path="src/audio_in/i2s_rx.sv" type="file.verilog" enable="1"/>
         <File path="src/color_decoder.sv" type="file.verilog" enable="1"/>
-        <File path="src/complementary_filter.sv" type="file.verilog" enable="1"/>
         <File path="src/cordic_rotator.sv" type="file.verilog" enable="1"/>
         <File path="src/delay_line.sv" type="file.verilog" enable="1"/>
         <File path="src/gowin_pll/gowin_pll.v" type="file.verilog" enable="1"/>
@@ -30,6 +29,7 @@
         <File path="src/top.sv" type="file.verilog" enable="1"/>
         <File path="src/video_in/ping_pong_buffer_controller.sv" type="file.verilog" enable="1"/>
         <File path="src/video_in/video_in_sync_seperator.sv" type="file.verilog" enable="1"/>
+        <File path="src/yc_separator.sv" type="file.verilog" enable="1"/>
         <File path="src/yuv_to_rgb.sv" type="file.verilog" enable="1"/>
         <File path="src/tang_console_neo_138k.cst" type="file.cst" enable="1"/>
         <File path="src/retro_upscaler.rao" type="file.gao" enable="0"/>

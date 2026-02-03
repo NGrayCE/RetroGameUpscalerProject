@@ -3,15 +3,15 @@ module loop_filter(
 	input 	logic	rst,
 	input	logic	burst_active,
 	input	logic	signed [11:0] error_in, //the red component of the color burst
-	output	logic	signed [15:0] offset_out
+	output	logic	signed [31:0] offset_out
 );
 
 	// Accumulate Error over the Burst
     // The burst is noisy. Averaging it over the ~20-90 tick duration gives a cleaner error.
-    logic signed [17:0] burst_accumulator;
+    logic signed [31:0] burst_accumulator;
     logic [6:0]         sample_count;
     logic               update_pulse;
-    logic signed [17:0] captured_error;
+    logic signed [31:0] captured_error;
 
     always_ff @(posedge clk or posedge rst) begin
         if (rst) begin
@@ -45,7 +45,7 @@ module loop_filter(
     localparam int KI_SHIFT = 10; // Integral Gain (Divide by 2^10 = 1024)
 
     logic signed [31:0] integrator; // Large register to hold long-term drift
-    logic signed [15:0] p_term, i_term;
+    logic signed [31:0] p_term, i_term;
 
     always_ff @(posedge clk or posedge rst) begin
         if (rst) begin

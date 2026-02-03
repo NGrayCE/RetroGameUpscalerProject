@@ -1,0 +1,3 @@
+../../src/cordic_rotator.sv
+../../src/nco_phase_driver.sv
+tb_nco_phase_driver.sv

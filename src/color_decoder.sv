@@ -43,7 +43,10 @@ module color_decoder (
 	
 	logic signed [11:0] luma_delayed;
 	// Need to delay luma signal to align with the chroma pipeline
-	delay_line luma_delay(
+	delay_line#(
+    .DATA_WIDTH(12),
+    .DELAY_CYCLES(8) // Explicitly match 1/2 of chroma window size
+	) luma_delay (
 			.clk(clk),
 			.rst(rst),
 			.data_in(y_luma),
@@ -53,11 +56,14 @@ module color_decoder (
 	
     // 3. Demodulate C into U/V
     logic signed [11:0] u_val, v_val;
-	// u and v before filtering
 	logic signed [11:0] u_pre, v_pre;
+	logic signed [23:0] u_mult, v_mult;
     
-	assign v_pre = c_chroma * cos_val;
-	assign u_pre = c_chroma * sin_val;
+	assign v_mult = c_chroma * cos_val;
+	assign u_mult = c_chroma * sin_val;
+	
+	assign v_pre = v_mult[22:11];
+	assign u_pre = u_mult[22:11];
  
 	//average filter latency is 8 cycles
 	simple_average_filter v_filter(
@@ -74,20 +80,13 @@ module color_decoder (
 			.data_out(u_val)	//demodulated u
 	);
 	
-	// raw color burst is alinged to the "blue" phase so demodulate the red to find the error
-	logic signed [23:0] v_mult;
-	assign v_mult = c_chroma * cos_val;
-	
-	// 12 bit error value
-	logic signed [11:0] v_error;
-	assign v_error = v_mult[22:11];
 	
     // Instantiate Loop Filter
     loop_filter pll_loop (
         .clk(clk),
         .rst(rst),
         .burst_active(burst_active),    // From sync_separator
-        .error_in(v_error),         // The "Red" seen during burst
+        .error_in(v_pre),         // The "Red" seen during burst
         .offset_out(loop_filter_offset) // The correction value
     );
 

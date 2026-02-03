@@ -11,7 +11,7 @@ module cordic_rotator #(
 
     // Start with scaling factor of ~0.60725 to avoid a multiplication
     // 0.60725 * 2^(DATA_WIDTH-1)
-    localparam int CORDIC_GAIN = int'(0.60725 * (2**(DATA_WIDTH-2))); 
+    localparam int CORDIC_GAIN = int'(0.60725 * (2**(DATA_WIDTH-1))); 
 
     // ATAN Table (Pre-calculated angles for each step)
     // Scaled to match the 20-bit target_angle input
@@ -45,6 +45,9 @@ module cordic_rotator #(
     logic signed [DATA_WIDTH:0] y [STAGES-1:0];
     logic signed [19:0]         z [STAGES-1:0];
 
+	// Constants for 45 and 135 degrees
+    localparam int DEG_45  = 20'd131072;
+    localparam int DEG_135 = 20'd393216;
     // Iteration Logic
     genvar i;
     generate
@@ -55,19 +58,40 @@ module cordic_rotator #(
                     y[i] <= 0;
                     z[i] <= 0;
                 end else begin
-                    // First Stage: Initialize
-                    if (i == 0) begin
-                        // Determine direction based on input angle sign
-                        // 1 = negative rotation, 0 = positive
-                        if (target_angle[19] == 1'b1) begin
-                            x[0] <= CORDIC_GAIN + 0; // (y >> 0 is 0)
-                            y[0] <= 0 - CORDIC_GAIN; // (x >> 0 is x)
-                            z[0] <= target_angle + atan_table[0];
-                        end else begin
-                            x[0] <= CORDIC_GAIN - 0;
-                            y[0] <= 0 + CORDIC_GAIN;
-                            z[0] <= target_angle - atan_table[0];
-                        end
+                    // --- STAGE 0: Initial Rotation & Quadrant Check ---
+					if (i == 0) begin
+						// Check the top 2 bits to find the Quadrant
+						case (target_angle[19:18])
+							// Quadrant 1 (0 to 90): Standard Start (0 deg), Rotate +45
+							2'b00: begin
+								x[0] <= CORDIC_GAIN - 0;
+								y[0] <= 0 + CORDIC_GAIN;
+								z[0] <= target_angle - DEG_45;
+							end
+
+							// Quadrant 2 (90 to 180): Start Backwards (180 deg), Rotate -45
+							// X starts negative, Y starts positive (effective 135 deg start)
+							2'b01: begin
+								x[0] <= -CORDIC_GAIN + 0;
+								y[0] <= 0 + CORDIC_GAIN;
+								z[0] <= target_angle - DEG_135;
+							end
+
+							// Quadrant 3 (-180 to -90): Start Backwards (-180 deg), Rotate +45
+							// X starts negative, Y starts negative (effective -135 deg start)
+							2'b10: begin
+								x[0] <= -CORDIC_GAIN - 0;
+								y[0] <= 0 - CORDIC_GAIN;
+								z[0] <= target_angle + DEG_135;
+							end
+
+							// Quadrant 4 (-90 to 0): Standard Start (0 deg), Rotate -45
+							2'b11: begin
+								x[0] <= CORDIC_GAIN + 0;
+								y[0] <= 0 - CORDIC_GAIN;
+								z[0] <= target_angle + DEG_45;
+							end
+						endcase
                     end 
                     // Subsequent Stages
                     else begin
@@ -86,9 +110,25 @@ module cordic_rotator #(
             end
         end
     endgenerate
+	
+	// Internal signals are 13-bit (to handle the growth)
+    // We clamp them to 12-bit for the output
+    logic signed [DATA_WIDTH:0] x_final, y_final;
+    assign x_final = x[STAGES-1];
+    assign y_final = y[STAGES-1];
 
-    // Output Mapping
-    assign cos_out = x[STAGES-1][DATA_WIDTH-1:0];
-    assign sin_out = y[STAGES-1][DATA_WIDTH-1:0];
+    // Clamp Cosine
+    always_comb begin
+        if (x_final > 2047)      cos_out = 2047;
+        else if (x_final < -2048) cos_out = -2048;
+        else                      cos_out = x_final[DATA_WIDTH-1:0];
+    end
+
+    // Clamp Sine
+    always_comb begin
+        if (y_final > 2047)      sin_out = 2047;
+        else if (y_final < -2048) sin_out = -2048;
+        else                      sin_out = y_final[DATA_WIDTH-1:0];
+    end
 
 endmodule

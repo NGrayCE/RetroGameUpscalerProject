@@ -1,0 +1,3 @@
+../../src/prim_sim.v
+../../src/yc_separator.sv
+tb_yc_separator.sv
