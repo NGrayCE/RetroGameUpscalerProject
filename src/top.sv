@@ -172,6 +172,7 @@ module top (
     //Signals from sync module
     logic sync_active_video;
     logic sync_h_pulse, sync_v_pulse;
+    logic burst_active;
 
     sync_separator sync_inst (
         //INPUTS
@@ -183,11 +184,12 @@ module top (
         //OUTPUTS
         .h_sync_pulse(sync_h_pulse),        // Pulse when line if finished
         .v_sync_pulse(sync_v_pulse),        // Pulse when frame is finished
-        .active_video(sync_active_video)    // High during valid capture window
+        .active_video(sync_active_video),    // High during valid capture window
+        .burst_active(burst_active)
     );
 
     //Internal signals for dual port block ram
-    logic [11:0] ram_wr_data, ram_rd_data, pp_pixel_out;
+    logic [23:0] ram_wr_data, ram_rd_data, pp_pixel_out;
     logic [11:0] ram_wr_addr, ram_rd_addr;
     logic        ram_wr_en;
 
@@ -199,9 +201,9 @@ module top (
     //Only want to write to RAM if we are in active video AND it's a valid sample cycle
     assign write_qualifier = sync_active_video && adc_enable_strobe;
 
-    //Detect start of HDMI line to reset read pointer
+    // Detect start of HDMI line to reset read pointer
     // Reset read pointer on sync detected
-    //TODO:is the cy condition still needed?
+    // TODO:is the cy condition still needed?
     assign hdmi_line_start = (cx == 0) || (cy == 0); 
 
     //Ping pong controller to handle read and write of video buffer
@@ -215,7 +217,7 @@ module top (
         .h_sync_in(sync_h_pulse),
         .v_sync_in(sync_v_pulse),
         .active_video_in(write_qualifier),
-        .pixel_data_in(adc_data_captured),
+        .pixel_data_in(rgb_data),
         
         // Read Side
         .line_reset(hdmi_line_start),      
@@ -240,7 +242,7 @@ module top (
             .clka(clk_pixel),   // Run on same clock, ram controller will handle timing
             .cea(ram_wr_en),
             .ada(ram_wr_addr),  // 12 bit address, MSB for buffer select
-            .din(ram_wr_data),  // 12 but data from ADC
+            .din(ram_wr_data),  // 24 bit data from ADC
 
             //Read side
             .clkb(clk_pixel),
@@ -249,7 +251,7 @@ module top (
             .oce(1'b1),
 
             //OUTPUTS
-            .dout(ram_rd_data) //12 bit output for controller
+            .dout(ram_rd_data) // 24 bit output for controller
 
         );
 
@@ -272,14 +274,17 @@ module top (
         end
     end
 `else
-    //TODO: Add Chroma filtering for color output
-    // For now convert 12-bit monochrome to 24-bit RGB (Grayscale)
-    logic [7:0] gray_val;
-    assign gray_val = pp_pixel_out[11:4];
+    // Create a signed version of the input
+    logic signed [11:0] adc_signed;
+    assign adc_signed = {~adc_raw[11], adc_raw[10:0]}; // Invert MSB to center at 0
 
-    always_comb begin
-        rgb_data = {gray_val, gray_val, gray_val}; 
-    end
+    color_decoder decoder_inst(
+        .clk(clk_pixel),
+        .rst(sys_rst),
+        .adc_raw(adc_signed),
+        .burst_active(burst_active),
+        .rgb_out(rgb_data)
+    );
 `endif
 
     //HDMI Module instantiation 
@@ -295,7 +300,7 @@ module top (
       .clk_pixel(clk_pixel),
       .clk_audio(~lrck_internal),           // Pass inverted clock to prevent race condition with i2S module
       .reset(hdmi_rst_clean),               // Safe reset signal
-      .rgb(rgb_data),
+      .rgb(pp_pixel_out),
       .audio_sample_word(audio_sample_word),    
       .analog_frame_finished(sync_v_pulse), // To synchronize frames
       //OUTPUTS

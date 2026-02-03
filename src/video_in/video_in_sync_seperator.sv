@@ -10,6 +10,7 @@ module sync_separator (
     output logic        h_sync_pulse,   // signal at start of LINE
     output logic        v_sync_pulse,   // signal at start of FRAME
     output logic        active_video,   // High when valid pixel data is present
+    output logic        burst_active,   // high during color burst
     output logic [11:0] x_coord         // For debugging
 );
 
@@ -26,20 +27,26 @@ module sync_separator (
     parameter int ACTIVE_WIDTH     = 1920; // Capture 1920 samples
 
     // Fixed "Safety Margin" above the sync tip 
-    localparam int SYNC_MARGIN = 250;
+    parameter int SYNC_MARGIN = 250;
 
+    // Burst usually starts ~0.6us after sync and lasts ~2.5us.
+    // 0.6us * 37MHz ~= 22 ticks
+    // 2.5us * 37MHz ~= 92 ticks
+    parameter int BURST_START = 25;
+    parameter int BURST_END = 110;
     /****LOGIC****/
 
     logic is_sync_level;
     int   low_counter;
     
     // Internal state
-    logic       prev_sync_level;
+    logic        prev_sync_level;
     logic [11:0] pixel_counter;
     logic        in_active_region;
     //save when v sync is detected and reset in sync with h sync
     logic v_sync_flag;
 
+    assign burst_active = (pixel_counter > BURST_START && pixel_counter < BURST_END);
     assign x_coord = pixel_counter;
     assign active_video = in_active_region;
 

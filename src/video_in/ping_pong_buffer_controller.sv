@@ -10,20 +10,20 @@ module ping_pong_controller (
     input  logic        h_sync_in,          // Triggers the buffer swap
     input  logic        v_sync_in,          // To align frames
     input  logic        active_video_in,    // flag for active video data
-    input  logic [11:0] pixel_data_in,      // Input from adc
+    input  logic [23:0] pixel_data_in,      // decoded pixel data from color decoder
     
     //From HDMI Module
     input  logic        line_reset,         // Read line again when signaled
     input  logic        hdmi_request,       // HDMI module asking for a pixel
-    output logic [11:0] pixel_data_out,     // Output for HDMI module
+    output logic [23:0] pixel_data_out,     // Output for HDMI module
     
     // Memory Interface
     output logic        ram_wr_en,
     output logic [11:0] ram_wr_addr,
-    output logic [11:0] ram_wr_data,
+    output logic [23:0] ram_wr_data,
     
     output logic [11:0] ram_rd_addr,
-    input  logic [11:0] ram_rd_data
+    input  logic [23:0] ram_rd_data
 );
 
     // State variable to track which buffer is being written to
