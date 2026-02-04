@@ -10,7 +10,6 @@ module yuv_to_rgb (
     // Output to HDMI (Standard 24-bit RGB)
     output logic [23:0] rgb_out
 );
-
     // Coefficients (Scaled by 1024)
     localparam int C_RV = 1167; // 1.140
     localparam int C_GU = 404;  // 0.395

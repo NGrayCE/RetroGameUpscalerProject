@@ -7,6 +7,11 @@ module simple_average_filter #(
     input  logic signed [DATA_WIDTH-1:0] data_in,
     output logic signed [DATA_WIDTH-1:0] data_out
 );
+
+    // 1. Calculate the Shift Amount automatically
+    // log2(32) = 5, log2(16) = 4
+    localparam int SHIFT_BITS = $clog2(WINDOW_SIZE);
+
     logic signed [DATA_WIDTH-1:0] shift_reg [WINDOW_SIZE-1:0];
     logic signed [19:0] accumulator;
     integer i;
@@ -24,7 +29,7 @@ module simple_average_filter #(
             data_out    <= 0;
         end else begin
             accumulator <= accumulator + data_in - shift_reg[WINDOW_SIZE-1];
-            data_out    <= accumulator >>> 4;
+            data_out    <= accumulator >>> SHIFT_BITS;
         end
     end
 endmodule

@@ -1,8 +1,8 @@
 module loop_filter(
 	input	logic	clk,
 	input 	logic	rst,
-	input	logic	burst_active,
-	input	logic	signed [11:0] error_in, //the red component of the color burst
+	input	logic	 burst_active,
+	input	logic	 signed [11:0] error_in, //the red component of the color burst
 	output	logic	signed [31:0] offset_out
 );
 
@@ -41,8 +41,8 @@ module loop_filter(
 
 	// PI Controller
     // Powers of 2 allow bit-shifts
-    localparam int KP_SHIFT = 6;  // Proportional Gain (Divide by 2^6 = 64)
-    localparam int KI_SHIFT = 10; // Integral Gain (Divide by 2^10 = 1024)
+    localparam int KP_SHIFT = 3;  // Proportional Gain (Divide by 2^6 = 64)
+    localparam int KI_SHIFT = 7; // Integral Gain (Divide by 2^10 = 1024)
 
     logic signed [31:0] integrator; // Large register to hold long-term drift
     logic signed [31:0] p_term, i_term;

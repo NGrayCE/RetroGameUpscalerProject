@@ -2,7 +2,7 @@ module nco_sine_generator (
     input  logic        clk,
     input  logic        rst,
     
-    input  logic [31:0] phase_inc, 
+    input  logic signed [31:0] phase_inc, 
     
     // Outputs
     output logic signed [11:0] sin_val,

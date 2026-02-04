@@ -18,6 +18,7 @@ module top (
 
     // ADC interface (AD9226)
     output logic        adc_clk,                // Sampling clk sent to the adc
+    input  logic        adc_otr,                 // out of range bit
     input logic [11:0]  adc_in                  // 12 bit digital data in
 );
 
