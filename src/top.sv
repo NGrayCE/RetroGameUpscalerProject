@@ -170,6 +170,14 @@ module top (
         end
     end
 
+
+
+    // Signed wire for processing (Range: -2048 to +2047)
+    logic signed [12:0] pixel_centered;
+
+    // MOVE THE FLOOR TO ZERO
+    assign pixel_centered = $signed({1'b0, adc_data_captured}) - $signed(13'd2500);
+
     //Signals from sync module
     logic sync_active_video;
     logic sync_h_pulse, sync_v_pulse;
@@ -180,7 +188,7 @@ module top (
         .clk(clk_pixel),
         .rst(sys_rst),
         .sample_valid(adc_enable_strobe), // Only process when new data arrives
-        .adc_data(adc_data_captured),
+        .adc_data(pixel_centered),
 
         //OUTPUTS
         .h_sync_pulse(sync_h_pulse),        // Pulse when line if finished
@@ -275,14 +283,12 @@ module top (
         end
     end
 `else
-    // Create a signed version of the input
-    logic signed [11:0] adc_signed;
-    assign adc_signed = {~adc_data_captured[11], adc_data_captured[10:0]}; // Invert MSB to center at 0
+
 
     color_decoder decoder_inst(
         .clk(clk_pixel),
         .rst(sys_rst),
-        .adc_raw(adc_signed),
+        .adc_raw(pixel_centered),
         .burst_active(burst_active),
         .rgb_out(rgb_data)
     );

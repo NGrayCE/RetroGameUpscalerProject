@@ -41,8 +41,8 @@ module loop_filter(
 
 	// PI Controller
     // Powers of 2 allow bit-shifts
-    localparam int KP_SHIFT = 3;  // Proportional Gain (Divide by 2^6 = 64)
-    localparam int KI_SHIFT = 7; // Integral Gain (Divide by 2^10 = 1024)
+    localparam int KP_SHIFT = 4;  // Proportional Gain (Divide by 2^6 = 64)
+    localparam int KI_SHIFT = 8; // Integral Gain (Divide by 2^10 = 1024)
 
     logic signed [31:0] integrator; // Large register to hold long-term drift
     logic signed [31:0] p_term, i_term;
