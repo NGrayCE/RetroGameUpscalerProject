@@ -172,12 +172,32 @@ module top (
 
 
 
-    // Signed wire for processing (Range: -2048 to +2047)
+    // --- NEW: DYNAMIC GAIN AND OFFSET CONTROL ---
     logic signed [12:0] pixel_centered;
+    logic [11:0] sync_floor; // From sync separator
+    
+    // We do the math in a combinatorial block or simple assign
+    // 1. Unsigned Clamping: Remove the DC floor (Sync Tip becomes 0)
+    // 2. Gain: Multiply by 2 (Left shift 1) to stretch contrast
+    // 3. Re-Bias: Subtract ~3500 so Black Level (~400-500) maps to -2048
+    // Result: Sync(-3500), Black(-2048), White(+2048)
+    
+    logic signed [31:0] pixel_math; // Extra bits for calculation
+    
+    always_comb begin
+        // 1. Subtract the floor (Sync Tip becomes 0)
+        // 2. Multiply by 2 (Contrast Gain)
+        // 3. Subtract 2048 to move 0 to the bottom of signed range
+        pixel_math = (($signed({1'b0, adc_data_captured}) - $signed({1'b0, sync_floor})) << 2) - 14'd2048;
 
-    // MOVE THE FLOOR TO ZERO
-    assign pixel_centered = $signed({1'b0, adc_data_captured}) - $signed(13'd3000);
-
+        // 4. CLAMPING (Prevent Wrapping to White)
+        if (pixel_math < -2048) 
+            pixel_centered = -2048;      // Floor (Sync Tip)
+        else if (pixel_math > 2047) 
+            pixel_centered = 2047;       // Ceiling (White)
+        else 
+            pixel_centered = pixel_math[12:0]; // Safe to cast
+    end
     //Signals from sync module
     logic sync_active_video;
     logic sync_h_pulse, sync_v_pulse;
@@ -194,7 +214,8 @@ module top (
         .h_sync_pulse(sync_h_pulse),        // Pulse when line if finished
         .v_sync_pulse(sync_v_pulse),        // Pulse when frame is finished
         .active_video(sync_active_video),    // High during valid capture window
-        .burst_active(burst_active)
+        .burst_active(burst_active),
+        .sync_threshold(sync_floor)
     );
 
     //Internal signals for dual port block ram
