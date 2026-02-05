@@ -1,7 +1,7 @@
 module color_decoder (
     input logic clk,             // 37 MHz or 74 MHz
     input logic rst,
-    input logic signed [11:0] adc_raw,  // Raw composite input
+    input logic signed [12:0] adc_raw,  // Raw composite input
     input logic burst_active,      // From sync separator
     
     output logic [23:0] rgb_out	 //output pixel for hdmi
@@ -40,7 +40,7 @@ module color_decoder (
 			.luma_out(y_luma),
 			.chroma_out(c_chroma)
 	);
-	
+
     // --- NEW: Filter Luma to remove 3.58MHz noise ---
     logic signed [11:0] y_luma_filtered;
     
@@ -51,23 +51,6 @@ module color_decoder (
         .data_out(y_luma_filtered) // Latency is likely ~8 cycles
     );
 
-    // --- MODIFY: Update Delay Line ---
-    // Since the filter adds ~8 cycles of delay, and we want to match 
-    // the Chroma path (which also has a filter), we might not need extra delay.
-    // Try setting DELAY_CYCLES to 0 or 1, or simply pass y_luma_filtered through.
-    /*
-    logic signed [11:0] luma_delayed;
-    
-    delay_line#(
-        .DATA_WIDTH(12),
-        .DELAY_CYCLES(0) // <--- REDUCE THIS (Try 0, if colors bleed left, increase it)
-    ) luma_delay (
-        .clk(clk),
-        .rst(rst),
-        .data_in(y_luma_filtered), // <--- USE FILTERED SIGNAL
-        .data_out(luma_delayed)
-    );
-	*/
 	
     // 3. Demodulate C into U/V
     logic signed [11:0] u_val, v_val;

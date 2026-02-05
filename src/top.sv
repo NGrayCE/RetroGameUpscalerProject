@@ -176,7 +176,7 @@ module top (
     logic signed [12:0] pixel_centered;
 
     // MOVE THE FLOOR TO ZERO
-    assign pixel_centered = $signed({1'b0, adc_data_captured}) - $signed(13'd2500);
+    assign pixel_centered = $signed({1'b0, adc_data_captured}) - $signed(13'd3000);
 
     //Signals from sync module
     logic sync_active_video;
@@ -188,7 +188,7 @@ module top (
         .clk(clk_pixel),
         .rst(sys_rst),
         .sample_valid(adc_enable_strobe), // Only process when new data arrives
-        .adc_data(pixel_centered),
+        .adc_data(adc_data_captured),
 
         //OUTPUTS
         .h_sync_pulse(sync_h_pulse),        // Pulse when line if finished
