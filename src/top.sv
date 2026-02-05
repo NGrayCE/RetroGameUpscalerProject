@@ -182,13 +182,13 @@ module top (
     // 3. Re-Bias: Subtract ~3500 so Black Level (~400-500) maps to -2048
     // Result: Sync(-3500), Black(-2048), White(+2048)
     
-    logic signed [31:0] pixel_math; // Extra bits for calculation
+    logic signed [14:0] pixel_math; // Extra bits for calculation
     
     always_comb begin
         // 1. Subtract the floor (Sync Tip becomes 0)
         // 2. Multiply by 2 (Contrast Gain)
         // 3. Subtract 2048 to move 0 to the bottom of signed range
-        pixel_math = (($signed({1'b0, adc_data_captured}) - $signed({1'b0, sync_floor})) << 2) - 14'd2048;
+        pixel_math = (($signed({1'b0, adc_data_captured}) - $signed({1'b0, sync_floor})) << 1) - 14'd2048;
 
         // 4. CLAMPING (Prevent Wrapping to White)
         if (pixel_math < -2048) 

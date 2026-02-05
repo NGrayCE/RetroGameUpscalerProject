@@ -33,6 +33,8 @@ module sync_separator (
     // Burst usually starts ~0.6us after sync and lasts ~2.5us.
     // 0.6us * 37MHz ~= 22 ticks
     // 2.5us * 37MHz ~= 92 ticks
+    parameter int BURST_START = 25;
+    parameter int BURST_END = 110;
     /****LOGIC****/
 
     logic is_sync_level;

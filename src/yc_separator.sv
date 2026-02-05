@@ -15,6 +15,7 @@ module yc_separator (
     logic signed [11:0] shift_reg [WINDOW_SIZE-1:0];
     logic signed [17:0] accumulator; // Expanded to hold sum of 21 * 12-bit
     logic signed [11:0] center_pixel;
+    logic signed [12:0] chroma_calc;
     integer i;
 
     // BLOCK 1: Shift Register
@@ -40,7 +41,14 @@ module yc_separator (
 
             // 3. Calculate Chroma (Delta)
             // Center tap is at index 10 (21 / 2)
-            center_pixel = shift_reg[10]; 
+            center_pixel = shift_reg[10];
+            // Perform subtraction in 13 bits
+            chroma_calc = center_pixel - ((accumulator * RECIPROCAL) >>> 16);
+
+            // CLAMP to 12 bits
+            if (chroma_calc > 2047)      chroma_out <= 2047;
+            else if (chroma_calc < -2048) chroma_out <= -2048;
+            else                          chroma_out <= chroma_calc[11:0]; 
             chroma_out   <= center_pixel - ((accumulator * RECIPROCAL) >>> 16);
         end
     end

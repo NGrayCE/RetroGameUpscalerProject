@@ -54,16 +54,30 @@ module color_decoder (
 	
     // 3. Demodulate C into U/V
     logic signed [12:0] u_val, v_val;
-	logic signed [11:0] u_pre, v_pre;
+	logic signed [12:0] u_pre, v_pre;
 	logic signed [23:0] u_mult, v_mult;
     
 	assign v_mult = c_chroma * cos_val;
 	assign u_mult = c_chroma * sin_val;
-	
-    assign v_pre = (v_mult >>> 11); 
-    assign u_pre = (u_mult >>> 11);
- 
 
+    // Intermediate wires to check for overflow (13+ bits)
+    logic signed [13:0] v_calc, u_calc;
+    assign v_calc = (v_mult >>> 11);
+    assign u_calc = (u_mult >>> 11);
+
+    // Clamp V Channel
+    always_comb begin
+        if (v_calc > 2047)      v_pre = 2047;
+        else if (v_calc < -2048) v_pre = -2048;
+        else                     v_pre = v_calc[11:0];
+    end
+
+    // Clamp U Channel
+    always_comb begin
+        if (u_calc > 2047)      u_pre = 2047;
+        else if (u_calc < -2048) u_pre = -2048;
+        else                     u_pre = u_calc[11:0];
+    end
 
     logic signed [11:0] v_filter_out, u_filter_out;
 	//average filter latency is 10 cycles
@@ -86,8 +100,8 @@ module color_decoder (
     // 2. Invert V:     v_val = -v_filter_out; u_val = u_filter_out;  (Fixes Cyan Faces)
     // 3. Swap:         v_val = u_filter_out; u_val = v_filter_out;   (Fixes 90 deg rotation)
     // 4. Swap+Invert:  v_val = -u_filter_out; u_val = v_filter_out;
-    assign v_val = v_filter_out << 1; 
-    assign u_val = u_filter_out << 1;	
+    assign v_val = v_filter_out; 
+    assign u_val = u_filter_out;	
 	
     // create a delayed version of the burst flag
     logic burst_active_delayed;
