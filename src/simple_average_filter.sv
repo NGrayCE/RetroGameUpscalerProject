@@ -13,7 +13,7 @@ module simple_average_filter #(
     localparam int SHIFT_BITS = $clog2(WINDOW_SIZE);
 
     logic signed [DATA_WIDTH-1:0] shift_reg [WINDOW_SIZE-1:0];
-    logic signed [19:0] accumulator;
+    logic signed [DATA_WIDTH + $clog2(WINDOW_SIZE) : 0] accumulator;
     integer i;
 
     // BLOCK 1: Shift Register (NO RESET)

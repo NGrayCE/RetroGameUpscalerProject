@@ -9,7 +9,7 @@ module yc_separator #(
     output logic signed [DATA_WIDTH-1:0] chroma_out
 );
     logic signed [DATA_WIDTH-1:0] shift_reg [WINDOW_SIZE-1:0];
-    logic signed [23:0] accumulator;
+    logic signed [DATA_WIDTH + $clog2(WINDOW_SIZE) : 0] accumulator;
     logic signed [DATA_WIDTH-1:0] center_pixel;
     integer i;
 
