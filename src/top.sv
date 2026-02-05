@@ -188,7 +188,7 @@ module top (
         // 1. Subtract the floor (Sync Tip becomes 0)
         // 2. Multiply by 2 (Contrast Gain)
         // 3. Subtract 2048 to move 0 to the bottom of signed range
-        pixel_math = (($signed({1'b0, adc_data_captured}) - $signed({1'b0, sync_floor})) << 1) - 14'd2048;
+        pixel_math = (($signed({1'b0, adc_data_captured}) - $signed({1'b0, sync_floor})) << 2) - 14'd2048;
 
         // 4. CLAMPING (Prevent Wrapping to White)
         if (pixel_math < -2048) 
@@ -196,7 +196,7 @@ module top (
         else if (pixel_math > 2047) 
             pixel_centered = 2047;       // Ceiling (White)
         else 
-            pixel_centered = pixel_math[12:0]; // Safe to cast
+            pixel_centered = pixel_math; // Safe to cast
     end
     //Signals from sync module
     logic sync_active_video;

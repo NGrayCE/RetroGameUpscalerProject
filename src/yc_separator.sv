@@ -48,8 +48,7 @@ module yc_separator (
             // CLAMP to 12 bits
             if (chroma_calc > 2047)      chroma_out <= 2047;
             else if (chroma_calc < -2048) chroma_out <= -2048;
-            else                          chroma_out <= chroma_calc[11:0]; 
-            chroma_out   <= center_pixel - ((accumulator * RECIPROCAL) >>> 16);
+            else                          chroma_out <= chroma_calc; 
         end
     end
 endmodule

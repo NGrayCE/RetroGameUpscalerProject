@@ -17,7 +17,7 @@ module color_decoder (
     logic signed [31:0] current_phase_increment;
 	
 	always_comb begin
-        current_phase_increment = NOMINAL_INCREMENT + loop_filter_offset;
+        current_phase_increment = NOMINAL_INCREMENT;// + loop_filter_offset;
     end
 
     logic signed [11:0] sin_val, cos_val;
@@ -54,29 +54,29 @@ module color_decoder (
 	
     // 3. Demodulate C into U/V
     logic signed [12:0] u_val, v_val;
-	logic signed [12:0] u_pre, v_pre;
+	logic signed [11:0] u_pre, v_pre;
 	logic signed [23:0] u_mult, v_mult;
     
 	assign v_mult = c_chroma * cos_val;
 	assign u_mult = c_chroma * sin_val;
 
     // Intermediate wires to check for overflow (13+ bits)
-    logic signed [13:0] v_calc, u_calc;
-    assign v_calc = (v_mult >>> 11);
-    assign u_calc = (u_mult >>> 11);
+    logic signed [31:0] v_calc, u_calc;
+    assign v_calc = (v_mult >>> 10);
+    assign u_calc = (u_mult >>> 10);
 
     // Clamp V Channel
     always_comb begin
         if (v_calc > 2047)      v_pre = 2047;
         else if (v_calc < -2048) v_pre = -2048;
-        else                     v_pre = v_calc[11:0];
+        else                     v_pre = v_calc;
     end
 
     // Clamp U Channel
     always_comb begin
         if (u_calc > 2047)      u_pre = 2047;
         else if (u_calc < -2048) u_pre = -2048;
-        else                     u_pre = u_calc[11:0];
+        else                     u_pre = u_calc;
     end
 
     logic signed [11:0] v_filter_out, u_filter_out;
@@ -108,7 +108,7 @@ module color_decoder (
 
     // Simple shift register to delay by ~16 clocks (Match your pipeline depth)
     // You can use the 'delay_line' module you already have
-    delay_line #(.DATA_WIDTH(1), .DELAY_CYCLES(11)) burst_delayer (
+    delay_line #(.DATA_WIDTH(1), .DELAY_CYCLES(10)) burst_delayer (
         .clk(clk),
         .rst(rst),
         .data_in(burst_active),
