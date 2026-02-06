@@ -17,7 +17,7 @@ module color_decoder (
     logic signed [31:0] current_phase_increment;
 	
 	always_comb begin
-        current_phase_increment = NOMINAL_INCREMENT;// + loop_filter_offset;
+        current_phase_increment = NOMINAL_INCREMENT ;//+ loop_filter_offset;
     end
 
     logic signed [11:0] sin_val, cos_val;
@@ -62,8 +62,8 @@ module color_decoder (
 
     // Intermediate wires to check for overflow (13+ bits)
     logic signed [31:0] v_calc, u_calc;
-    assign v_calc = (v_mult >>> 10);
-    assign u_calc = (u_mult >>> 10);
+    assign v_calc = (v_mult >>> 4);
+    assign u_calc = (u_mult >>> 4);
 
     // Clamp V Channel
     always_comb begin

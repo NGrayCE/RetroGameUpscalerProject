@@ -1,16 +1,19 @@
-module nco_sine_generator (
+module nco_sine_generator #(parameter DATA_WIDTH=12,
+                            parameter CORDIC_STAGES=12)
+(
     input  logic        clk,
     input  logic        rst,
     
     input  logic signed [31:0] phase_inc, 
     
     // Outputs
-    output logic signed [11:0] sin_val,
-    output logic signed [11:0] cos_val
+    output logic signed [DATA_WIDTH-1:0] sin_val,
+    output logic signed [DATA_WIDTH-1:0] cos_val
 );
 	
 	
-    //Phase Accumulator
+    //Phase Accumulator:
+    //represents 360 degrees in 32 bits
     logic [31:0] phase_acc;
     
     always_ff @(posedge clk or posedge rst) begin
@@ -30,8 +33,8 @@ module nco_sine_generator (
 
     // Instantiate CORDIC
     cordic_rotator #(
-        .DATA_WIDTH(12),
-        .STAGES(12)      // 12 stages for 12-bit precision
+        .DATA_WIDTH(DATA_WIDTH),
+        .STAGES(CORDIC_STAGES)
     ) cordic_inst (
         .clk(clk),
         .rst(rst),
