@@ -64,8 +64,8 @@ module color_decoder (
 
     // Intermediate wires to check for overflow (13+ bits)
     logic signed [31:0] v_calc, u_calc;
-    assign v_calc = (v_mult >>> 8);
-    assign u_calc = (u_mult >>> 8);
+    assign v_calc = (v_mult >>> 2);
+    assign u_calc = (u_mult >>> 2);
 
     // Clamp V Channel
     always_comb begin
@@ -109,14 +109,14 @@ module color_decoder (
     always_comb begin
         if (v_gain > 2047)      v_val = 2047;
         else if (v_gain < -2048) v_val = -2048;
-        else                     v_val = v_calc;
+        else                     v_val = v_gain;
     end
 
     // Clamp U Channel
     always_comb begin
         if (u_gain > 2047)      u_val = 2047;
         else if (u_gain < -2048) u_val = -2048;
-        else                     u_val = u_calc;
+        else                     u_val = u_gain;
     end
     // create a delayed version of the burst flag
     logic burst_active_delayed;
