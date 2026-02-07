@@ -3,6 +3,8 @@ module color_decoder (
     input logic rst,
     input logic signed [11:0] adc_raw,  // video input centered around 0
     input logic burst_active,      // From sync separator
+
+    input logic signed [12:0] sat_gain,
     
     output logic [23:0] rgb_out	 //output pixel for hdmi
 );
@@ -62,8 +64,8 @@ module color_decoder (
 
     // Intermediate wires to check for overflow (13+ bits)
     logic signed [31:0] v_calc, u_calc;
-    assign v_calc = (v_mult >>> 4);
-    assign u_calc = (u_mult >>> 4);
+    assign v_calc = (v_mult >>> 8);
+    assign u_calc = (u_mult >>> 8);
 
     // Clamp V Channel
     always_comb begin
@@ -100,9 +102,22 @@ module color_decoder (
     // 2. Invert V:     v_val = -v_filter_out; u_val = u_filter_out;  (Fixes Cyan Faces)
     // 3. Swap:         v_val = u_filter_out; u_val = v_filter_out;   (Fixes 90 deg rotation)
     // 4. Swap+Invert:  v_val = -u_filter_out; u_val = v_filter_out;
-    assign v_val = v_filter_out; 
-    assign u_val = u_filter_out;	
-	
+    logic signed [19:0] v_gain, u_gain;
+    assign v_gain = (sat_gain * v_filter_out) >>> 20'sd6; 
+    assign u_gain = (sat_gain * u_filter_out) >>> 20'sd6;	
+	    // Clamp V Channel
+    always_comb begin
+        if (v_gain > 2047)      v_val = 2047;
+        else if (v_gain < -2048) v_val = -2048;
+        else                     v_val = v_calc;
+    end
+
+    // Clamp U Channel
+    always_comb begin
+        if (u_gain > 2047)      u_val = 2047;
+        else if (u_gain < -2048) u_val = -2048;
+        else                     u_val = u_calc;
+    end
     // create a delayed version of the burst flag
     logic burst_active_delayed;
 

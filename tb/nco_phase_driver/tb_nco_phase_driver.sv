@@ -2,21 +2,26 @@
 
 module tb_nco_sine_generator();
 
+	parameter int DATA_WIDTH = 12;
+    parameter int CORDIC_STAGES = 16;
+	
     // 1. Signals
     logic clk = 0;
     logic rst = 0;
     logic [31:0] phase_inc;
     
     // Outputs (Signed 12-bit)
-    logic signed [11:0] sin_val;
-    logic signed [11:0] cos_val;
+    logic signed [DATA_WIDTH-1:0] sin_val;
+    logic signed [DATA_WIDTH-1:0] cos_val;
 
     // 2. Clock Generation (74.25 MHz)
     // Period = 13.468 ns -> Half Period = 6.734 ns
     always #6.734 clk = ~clk;
 
     // 3. DUT Instantiation
-    nco_sine_generator dut (
+    nco_sine_generator #(.DATA_WIDTH(DATA_WIDTH),
+	.CORDIC_STAGES(CORDIC_STAGES))
+	dut (
         .clk(clk),
         .rst(rst),
         .phase_inc(phase_inc),

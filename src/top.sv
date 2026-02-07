@@ -5,6 +5,9 @@ module top (
     input  logic        sys_clk,                //50MHz crystal
     input  logic        rst_n,                  //active low button
     output logic        sys_rst,                //active high reset signal
+
+    input logic         btn_0,
+    input logic         btn_1,
     
     // HDMI Output
     output logic        tmds_clk_p, tmds_clk_n, //differential wire pairs for HDMI Serial transmission
@@ -172,9 +175,10 @@ module top (
 
 
 
-    // --- NEW: DYNAMIC GAIN AND OFFSET CONTROL ---
+    
+// --- NEW: DYNAMIC GAIN AND OFFSET CONTROL ---
     logic signed [12:0] pixel_centered;
-    logic [11:0] sync_floor; // From sync separator
+    logic  [11:0] sync_floor; // From sync separator
     
     // We do the math in a combinatorial block or simple assign
     // 1. Unsigned Clamping: Remove the DC floor (Sync Tip becomes 0)
@@ -182,13 +186,23 @@ module top (
     // 3. Re-Bias: Subtract ~3500 so Black Level (~400-500) maps to -2048
     // Result: Sync(-3500), Black(-2048), White(+2048)
     
-    logic signed [14:0] pixel_math; // Extra bits for calculation
+    logic signed [31:0] pixel_math, brightness_math; // Extra bits for calculation
+    logic signed [14:0] user_brightness, user_contrast, user_saturation;
+
+    parameter_controller param_cont(
+    .clk(clk_pixel),
+    .btn_select(btn_0),     // Button 1: Switch Mode
+    .btn_change(btn_1),     // Button 2: Increase Value
+    .saturation_gain(user_saturation),
+    .contrast_gain(user_contrast),
+    .brightness_offset(user_brightness)
+    );
     
     always_comb begin
-        // 1. Subtract the floor (Sync Tip becomes 0)
-        // 2. Multiply by 2 (Contrast Gain)
-        // 3. Subtract 2048 to move 0 to the bottom of signed range
-        pixel_math = (($signed({1'b0, adc_data_captured}) - $signed({1'b0, sync_floor})) << 2) - 14'd1000;
+        // 1. Shift left 3 (Multiply by 8) to boost the weak contrast.
+        // 2. Subtract ~3600 so that Black (200 * 8 = 1600) maps to roughly -2000.
+        brightness_math = (user_brightness * user_contrast);
+        pixel_math = (($signed({1'b0, adc_data_captured}) - $signed({1'b0, sync_floor})) * user_contrast) - brightness_math;
 
         // 4. CLAMPING (Prevent Wrapping to White)
         if (pixel_math < -2048) 
@@ -196,7 +210,7 @@ module top (
         else if (pixel_math > 2047) 
             pixel_centered = 2047;       // Ceiling (White)
         else 
-            pixel_centered = pixel_math; // Safe to cast
+            pixel_centered = pixel_math[12:0]; // Safe to cast
     end
     //Signals from sync module
     logic sync_active_video;
@@ -311,6 +325,7 @@ module top (
         .rst(sys_rst),
         .adc_raw(pixel_centered),
         .burst_active(burst_active),
+        .sat_gain(user_saturation),
         .rgb_out(rgb_data)
     );
 `endif

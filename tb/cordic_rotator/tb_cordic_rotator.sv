@@ -4,7 +4,7 @@ module tb_cordic_rotator();
 
 
     parameter int DATA_WIDTH = 12;
-    parameter int STAGES     = 12;
+    parameter int STAGES     = 16;
 
     logic clk = 0;
     logic rst = 0;
@@ -56,7 +56,7 @@ module tb_cordic_rotator();
         $display("Test 1: 0 Degrees");
         target_angle = 0;
         repeat(STAGES + 2) @(posedge clk);
-        $display("Angle: 0 | Sin: %d (Exp: 0) | Cos: %d (Exp: ~1024)", sin_out, cos_out);
+        $display("Angle: 0 | Sin: %d (Exp: 0) | Cos: %d (Exp: Max)", sin_out, cos_out);
 
         // --- TEST 2: +45 Degrees ---
         $display("\nTest 2: +45 Degrees");
