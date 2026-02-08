@@ -5,6 +5,9 @@ module top (
     input  logic        sys_clk,                //50MHz crystal
     input  logic        rst_n,                  //active low button
     output logic        sys_rst,                //active high reset signal
+
+    input logic         btn_0,
+    input logic         btn_1,
     
     // HDMI Output
     output logic        tmds_clk_p, tmds_clk_n, //differential wire pairs for HDMI Serial transmission
@@ -18,6 +21,7 @@ module top (
 
     // ADC interface (AD9226)
     output logic        adc_clk,                // Sampling clk sent to the adc
+    input  logic        adc_otr,                 // out of range bit
     input logic [11:0]  adc_in                  // 12 bit digital data in
 );
 
@@ -169,9 +173,49 @@ module top (
         end
     end
 
+
+
+    
+// --- NEW: DYNAMIC GAIN AND OFFSET CONTROL ---
+    logic signed [12:0] pixel_centered;
+    logic  [11:0] sync_floor; // From sync separator
+    
+    // We do the math in a combinatorial block or simple assign
+    // 1. Unsigned Clamping: Remove the DC floor (Sync Tip becomes 0)
+    // 2. Gain: Multiply by 2 (Left shift 1) to stretch contrast
+    // 3. Re-Bias: Subtract ~3500 so Black Level (~400-500) maps to -2048
+    // Result: Sync(-3500), Black(-2048), White(+2048)
+    
+    logic signed [31:0] pixel_math, brightness_math; // Extra bits for calculation
+    logic signed [14:0] user_brightness, user_contrast, user_saturation;
+
+    parameter_controller param_cont(
+    .clk(clk_pixel),
+    .btn_select(btn_0),     // Button 1: Switch Mode
+    .btn_change(btn_1),     // Button 2: Increase Value
+    .saturation_gain(user_saturation),
+    .contrast_gain(user_contrast),
+    .brightness_offset(user_brightness)
+    );
+    
+    always_comb begin
+        // 1. Shift left 3 (Multiply by 8) to boost the weak contrast.
+        // 2. Subtract ~3600 so that Black (200 * 8 = 1600) maps to roughly -2000.
+        brightness_math = (user_brightness * user_contrast);
+        pixel_math = (($signed({1'b0, adc_data_captured}) - $signed({1'b0, sync_floor})) * user_contrast) - brightness_math;
+
+        // 4. CLAMPING (Prevent Wrapping to White)
+        if (pixel_math < -2048) 
+            pixel_centered = -2048;      // Floor (Sync Tip)
+        else if (pixel_math > 2047) 
+            pixel_centered = 2047;       // Ceiling (White)
+        else 
+            pixel_centered = pixel_math[12:0]; // Safe to cast
+    end
     //Signals from sync module
     logic sync_active_video;
     logic sync_h_pulse, sync_v_pulse;
+    logic burst_active;
 
     sync_separator sync_inst (
         //INPUTS
@@ -183,11 +227,13 @@ module top (
         //OUTPUTS
         .h_sync_pulse(sync_h_pulse),        // Pulse when line if finished
         .v_sync_pulse(sync_v_pulse),        // Pulse when frame is finished
-        .active_video(sync_active_video)    // High during valid capture window
+        .active_video(sync_active_video),    // High during valid capture window
+        .burst_active(burst_active),
+        .sync_threshold(sync_floor)
     );
 
     //Internal signals for dual port block ram
-    logic [11:0] ram_wr_data, ram_rd_data, pp_pixel_out;
+    logic [23:0] ram_wr_data, ram_rd_data, pp_pixel_out;
     logic [11:0] ram_wr_addr, ram_rd_addr;
     logic        ram_wr_en;
 
@@ -199,9 +245,9 @@ module top (
     //Only want to write to RAM if we are in active video AND it's a valid sample cycle
     assign write_qualifier = sync_active_video && adc_enable_strobe;
 
-    //Detect start of HDMI line to reset read pointer
+    // Detect start of HDMI line to reset read pointer
     // Reset read pointer on sync detected
-    //TODO:is the cy condition still needed?
+    // TODO:is the cy condition still needed?
     assign hdmi_line_start = (cx == 0) || (cy == 0); 
 
     //Ping pong controller to handle read and write of video buffer
@@ -215,7 +261,7 @@ module top (
         .h_sync_in(sync_h_pulse),
         .v_sync_in(sync_v_pulse),
         .active_video_in(write_qualifier),
-        .pixel_data_in(adc_data_captured),
+        .pixel_data_in(rgb_data),
         
         // Read Side
         .line_reset(hdmi_line_start),      
@@ -240,7 +286,7 @@ module top (
             .clka(clk_pixel),   // Run on same clock, ram controller will handle timing
             .cea(ram_wr_en),
             .ada(ram_wr_addr),  // 12 bit address, MSB for buffer select
-            .din(ram_wr_data),  // 12 but data from ADC
+            .din(ram_wr_data),  // 24 bit data from ADC
 
             //Read side
             .clkb(clk_pixel),
@@ -249,7 +295,7 @@ module top (
             .oce(1'b1),
 
             //OUTPUTS
-            .dout(ram_rd_data) //12 bit output for controller
+            .dout(ram_rd_data) // 24 bit output for controller
 
         );
 
@@ -272,14 +318,16 @@ module top (
         end
     end
 `else
-    //TODO: Add Chroma filtering for color output
-    // For now convert 12-bit monochrome to 24-bit RGB (Grayscale)
-    logic [7:0] gray_val;
-    assign gray_val = pp_pixel_out[11:4];
 
-    always_comb begin
-        rgb_data = {gray_val, gray_val, gray_val}; 
-    end
+
+    color_decoder decoder_inst(
+        .clk(clk_pixel),
+        .rst(sys_rst),
+        .adc_raw(pixel_centered),
+        .burst_active(burst_active),
+        .sat_gain(user_saturation),
+        .rgb_out(rgb_data)
+    );
 `endif
 
     //HDMI Module instantiation 
@@ -295,7 +343,7 @@ module top (
       .clk_pixel(clk_pixel),
       .clk_audio(~lrck_internal),           // Pass inverted clock to prevent race condition with i2S module
       .reset(hdmi_rst_clean),               // Safe reset signal
-      .rgb(rgb_data),
+      .rgb(pp_pixel_out),
       .audio_sample_word(audio_sample_word),    
       .analog_frame_finished(sync_v_pulse), // To synchronize frames
       //OUTPUTS

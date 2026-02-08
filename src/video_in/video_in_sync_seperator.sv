@@ -10,6 +10,8 @@ module sync_separator (
     output logic        h_sync_pulse,   // signal at start of LINE
     output logic        v_sync_pulse,   // signal at start of FRAME
     output logic        active_video,   // High when valid pixel data is present
+    output logic        burst_active,   // high during color burst
+    output logic [11:0] sync_threshold,
     output logic [11:0] x_coord         // For debugging
 );
 
@@ -20,33 +22,40 @@ module sync_separator (
     parameter int VSYNC_MIN_WIDTH = 800;  // Minimum valid VSync (~21us)
     
     // Back Porch: Time between HSync rising edge and actual image data
-    parameter int BACK_PORCH_DELAY = 175; // ~4.7us
+    parameter int BACK_PORCH_DELAY = 222;//175; // ~4.7us
 
     // Screen Width: How many samples to capture per line
     parameter int ACTIVE_WIDTH     = 1920; // Capture 1920 samples
 
     // Fixed "Safety Margin" above the sync tip 
-    localparam int SYNC_MARGIN = 250;
+    parameter int SYNC_MARGIN = 100;
 
+    // Burst usually starts ~0.6us after sync and lasts ~2.5us.
+    // 0.6us * 37MHz ~= 22 ticks
+    // 2.5us * 37MHz ~= 92 ticks
+    parameter int BURST_START = 25;
+    parameter int BURST_END = 110;
     /****LOGIC****/
 
     logic is_sync_level;
     int   low_counter;
     
     // Internal state
-    logic       prev_sync_level;
+    logic        prev_sync_level;
     logic [11:0] pixel_counter;
     logic        in_active_region;
     //save when v sync is detected and reset in sync with h sync
     logic v_sync_flag;
 
+    assign burst_active = (pixel_counter > BURST_START && pixel_counter < BURST_END);
     assign x_coord = pixel_counter;
     assign active_video = in_active_region;
 
     //dynamic threshold comparator
     logic [11:0] sync_tip_val;     // The lowest voltage seen recently
     logic [15:0] leak_counter;     // Timer to slowly "forget" the minimum
-
+    //expose threshold to other modules
+    assign sync_threshold = sync_tip_val;
 
     always_ff @(posedge clk or posedge rst) begin
         if (rst) begin

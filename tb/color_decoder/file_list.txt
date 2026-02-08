@@ -1,0 +1,8 @@
+../../src/cordic_rotator.sv
+../../src/yuv_to_rgb.sv
+../../src/nco_phase_driver.sv
+../../src/delay_line.sv
+../../src/yc_separator.sv
+../../src/simple_average_filter.sv
+../../src/loop_filter.sv
+tb_color_decoder.sv
