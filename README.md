@@ -11,18 +11,20 @@ The core objective was to design a custom video pipeline capable of handling asy
 * **Double Buffering Architecture**: Utilizes a "Ping-Pong" buffer scheme backed by Dual-Port Block RAM (BRAM) to handle the speed difference between the input sampling rate and the HDMI output clock.
 * **720p HDMI Output**: Generates a standard 60Hz 720p video signal with proper blanking intervals and TMDS encoding.
 * **Digital Audio Integration**: Captures I2S stereo audio via a **PCM1808 ADC**, packets it into the HDMI data island, and transmits it synchronized with the video stream.
+* **NTSC Color Decoding Engine**: Real-time composite video decoder. Features a custom Digital Phase-Locked Loop (DPLL) for robust 3.58 MHz subcarrier recovery, Quadrature Demodulation for splitting chroma into U/V channels, and 21-tap FIR filters to clean signal noise before color space conversion.
 
 ## Hardware Architecture
 
 ### System Diagram
 The system pipeline follows this data flow:
-`Composite Input -> AD9226 ADC -> Sync Separator -> Ping-Pong RAM Buffer -> HDMI Transmitter -> HDMI Display`
+`Composite Input -> AD9226 ADC -> Sync Separator -> Color Decoder -> Ping-Pong RAM Buffer -> HDMI Transmitter -> HDMI Display`
 
 ### Modules Description
 * **`top.sv`**: The top-level entity that instantiates the PLLs, manages global resets, and routes data between the input capture, memory, and output display modules.
 * **`sync_separator.sv`**: Analyzes the incoming raw ADC values to detect sync tips (voltage thresholds). It creates digital HSync and VSync strobes and determines the "Active Video" region.
 * **`ping_pong_buffer_controller.sv`**: A memory controller that manages read/write pointers. It writes incoming active video pixels into one memory bank while simultaneously reading the previous line from the other bank for the HDMI output (Scanline doubling/scaling).
 * **`i2s_rx.sv`**: A serial-to-parallel interface that decodes the I2S audio stream from the PCM1808 into 16-bit Left/Right PCM samples.
+* **`color_decoder.sv`**: Takes the incoming data and signals from the sync_separator in order to capture the NTSC color burst frequency, demodulate it, and decode it from YUV colorspace into RGB.
 * **HDMI Core**: A comprehensive HDMI transmitter implementation (adapted from Sameer Puri's HDL modules) that handles:
     * 8b/10b TMDS Encoding.
     * Packet assembly for Audio Clock Regeneration (ACR) and InfoFrames.
