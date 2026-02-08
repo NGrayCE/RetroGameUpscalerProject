@@ -5,14 +5,14 @@ module parameter_controller (
     
     output logic signed [13:0] contrast_gain,
     output logic signed [13:0] brightness_offset,
-    output logic signed [7:0]  saturation_gain     // Controls U and V magnitude
+    output logic signed [13:0]  saturation_gain     // Controls U and V magnitude
 );
 
     // --- 1. Settings Registers ---
     // Default Values:
-    logic signed [13:0] bright_reg = 3000;    // Start at 0 (Middle)
-    logic signed [13:0] cont_reg   = 2;    // Start at 4x Contrast
-    logic signed [7:0]  sat_reg    = 64;   // Start at 1.0x (assuming /64 later)
+    logic signed [13:0] bright_reg = 4000;    // Start at 0 (Middle)
+    logic signed [13:0] cont_reg   = 4;    // Start at 4x Contrast
+    logic signed [13:0]  sat_reg    = 128;   // Start at 1.0x (assuming /64 later)
     
     // Modes: 0=Brightness (Hold), 1=Contrast (Click), 2=Saturation (Click)
     logic [1:0] mode = 0; 
@@ -75,7 +75,7 @@ module parameter_controller (
                 // BRIGHTNESS (Large Range, Fast Repeat)
                 0: begin
                     // Loop -2000 to +2000
-                    if (bright_reg > 6000)      bright_reg <= 2000;
+                    if (bright_reg > 10000)      bright_reg <= 4000;
                     else                        bright_reg <= bright_reg + 50; 
                 end
 
@@ -89,7 +89,7 @@ module parameter_controller (
                 // SATURATION (U/V Gain)
                 2: begin
                     // Loop 0x to 4x (assuming 64 is 1.0x)
-                    if (sat_reg >= 250)         sat_reg <= 10;
+                    if (sat_reg >= 255)         sat_reg <= 64;
                     else                        sat_reg <= sat_reg + 10;
                 end
             endcase

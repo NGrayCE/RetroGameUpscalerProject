@@ -28,7 +28,7 @@ module sync_separator (
     parameter int ACTIVE_WIDTH     = 1920; // Capture 1920 samples
 
     // Fixed "Safety Margin" above the sync tip 
-    parameter int SYNC_MARGIN = 250;
+    parameter int SYNC_MARGIN = 100;
 
     // Burst usually starts ~0.6us after sync and lasts ~2.5us.
     // 0.6us * 37MHz ~= 22 ticks

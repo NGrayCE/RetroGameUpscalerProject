@@ -19,7 +19,7 @@ module color_decoder (
     logic signed [31:0] current_phase_increment;
 	
 	always_comb begin
-        current_phase_increment = NOMINAL_INCREMENT ;//+ loop_filter_offset;
+        current_phase_increment = NOMINAL_INCREMENT + loop_filter_offset;
     end
 
     logic signed [11:0] sin_val, cos_val;
@@ -50,7 +50,7 @@ module color_decoder (
         .clk(clk),
         .rst(rst),
         .data_in(y_luma),
-        .data_out(y_luma_filtered) // Latency is likely ~8 cycles
+        .data_out(y_luma_filtered) 
     );
 
 	
@@ -64,8 +64,8 @@ module color_decoder (
 
     // Intermediate wires to check for overflow (13+ bits)
     logic signed [31:0] v_calc, u_calc;
-    assign v_calc = (v_mult >>> 2);
-    assign u_calc = (u_mult >>> 2);
+    assign v_calc = (v_mult >>> 11);
+    assign u_calc = (u_mult >>> 11);
 
     // Clamp V Channel
     always_comb begin
@@ -103,8 +103,8 @@ module color_decoder (
     // 3. Swap:         v_val = u_filter_out; u_val = v_filter_out;   (Fixes 90 deg rotation)
     // 4. Swap+Invert:  v_val = -u_filter_out; u_val = v_filter_out;
     logic signed [19:0] v_gain, u_gain;
-    assign v_gain = (sat_gain * v_filter_out) >>> 20'sd6; 
-    assign u_gain = (sat_gain * u_filter_out) >>> 20'sd6;	
+    assign v_gain = (sat_gain * v_filter_out) >>> 20'sd4; 
+    assign u_gain = (sat_gain * u_filter_out) >>> 20'sd4;	
 	    // Clamp V Channel
     always_comb begin
         if (v_gain > 2047)      v_val = 2047;
@@ -121,8 +121,7 @@ module color_decoder (
     // create a delayed version of the burst flag
     logic burst_active_delayed;
 
-    // Simple shift register to delay by ~16 clocks (Match your pipeline depth)
-    // You can use the 'delay_line' module you already have
+
     delay_line #(.DATA_WIDTH(1), .DELAY_CYCLES(10)) burst_delayer (
         .clk(clk),
         .rst(rst),
